@@ -1,61 +1,48 @@
-"""Use case: reprocessar clientes com integração Pipefy pendente."""
-
-from __future__ import annotations
-
+﻿from dataclasses import dataclass
+from src.domain.repositories import ClienteRepository
+from src.infrastructure.pipefy import PipefyClient
 import logging
-from dataclasses import dataclass
-
-from src.domain.repositories.interfaces import ClienteRepository, PipefyService
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass(frozen=True)
+@dataclass
 class ReprocessarPendentesOutput:
-    total_encontrados: int
-    total_sucesso: int
-    total_falha: int
-    detalhes: list[dict]  # type: ignore[type-arg]
-
+    total_pendentes: int
+    processados_com_sucesso: int
+    falhas: int
 
 class ReprocessarPendentesUseCase:
-    def __init__(self, cliente_repo: ClienteRepository, pipefy_service: PipefyService) -> None:
-        self._repo = cliente_repo
-        self._pipefy = pipefy_service
-
-    def executar(self) -> ReprocessarPendentesOutput:
-        pendentes = self._repo.buscar_pendentes_pipefy()
-        logger.info("Reprocessando %d clientes com integração pendente.", len(pendentes))
-
+    def __init__(self, cliente_repo: ClienteRepository, pipefy_client: PipefyClient):
+        self.cliente_repo = cliente_repo
+        self.pipefy_client = pipefy_client
+    
+    async def execute(self) -> ReprocessarPendentesOutput:
+        # Buscar clientes com integração pendente
+        clientes_pendentes = await self.cliente_repo.buscar_integracao_pendente()
+        
         sucesso = 0
-        falha = 0
-        detalhes = []
-
-        for cliente in pendentes:
+        falhas = 0
+        
+        for cliente in clientes_pendentes:
             try:
-                card_id = self._pipefy.criar_card(cliente)
-                cliente.card_id = card_id
-                cliente.integracao_pipefy = "completo"
-                self._repo.atualizar(cliente)
+                # Tentar criar card no Pipefy novamente
+                card_id = await self.pipefy_client.criar_card(
+                    nome=cliente.nome,
+                    email=cliente.email,
+                    prioridade=cliente.prioridade.value
+                )
+                
+                # Atualizar cliente com card_id
+                await self.cliente_repo.atualizar_pipefy_card(cliente.id, card_id)
                 sucesso += 1
-                detalhes.append({
-                    "email": str(cliente.email),
-                    "resultado": "sucesso",
-                    "card_id": card_id,
-                })
-                logger.info("Card criado para %s: %s", cliente.email, card_id)
-            except Exception as exc:
-                falha += 1
-                detalhes.append({
-                    "email": str(cliente.email),
-                    "resultado": "falha",
-                    "erro": str(exc),
-                })
-                logger.exception("Falha ao reprocessar %s.", cliente.email)
-
+                logger.info(f"Cliente {cliente.email} reprocessado com sucesso. Card: {card_id}")
+                
+            except Exception as e:
+                falhas += 1
+                logger.error(f"Falha ao reprocessar cliente {cliente.email}: {e}")
+        
         return ReprocessarPendentesOutput(
-            total_encontrados=len(pendentes),
-            total_sucesso=sucesso,
-            total_falha=falha,
-            detalhes=detalhes,
+            total_pendentes=len(clientes_pendentes),
+            processados_com_sucesso=sucesso,
+            falhas=falhas
         )

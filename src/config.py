@@ -1,41 +1,51 @@
-"""Configurações da aplicação via variáveis de ambiente."""
-
-from __future__ import annotations
-
-from functools import lru_cache
-
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
-# Fonte única de versão — pyproject.toml e health check usam este valor
-APP_VERSION = "2.2.0"
-
+﻿from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Optional
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
-        env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore"
     )
-
+    
+    # Ambiente
+    env: str = "dev"
+    
+    # Banco de dados
     database_url: str = "sqlite:///./mundo_invest.db"
+    auto_create_tables: bool = False
+    db_echo: bool = False
+    
+    # Pipefy
     pipefy_token: str = ""
     pipefy_pipe_id: str = "302428309"
-    db_echo: bool = False
-    app_version: str = APP_VERSION
-
-    # "dev" ignora validações obrigatórias; qualquer outro valor = produção
-    env: str = "dev"
-
-    # Secret HMAC para validar webhooks do Pipefy (obrigatório fora de dev)
+    pipefy_graphql_url: str = "https://api.pipefy.com/graphql"
+    
+    # Segurança
     webhook_secret: str = ""
-
-    # Token para proteger endpoints /admin/* (obrigatório fora de dev)
     admin_token: str = ""
+    
+    # App
+    app_version: str = "2.2.0"
+    
+    @property
+    def is_production(self) -> bool:
+        return self.env.lower() not in {"dev", "local", "test"}
+    
+    @property
+    def is_development(self) -> bool:
+        return self.env.lower() in {"dev", "local"}
+    
+    def validate_critical_production(self) -> None:
+        \"\"\"Valida configurações críticas em produção\"\"\"
+        if self.is_production:
+            if not self.pipefy_token:
+                raise ValueError("PIPEFY_TOKEN é obrigatório em produção")
+            if not self.webhook_secret:
+                raise ValueError("WEBHOOK_SECRET é obrigatório em produção")
+            if not self.admin_token:
+                raise ValueError("ADMIN_TOKEN é obrigatório em produção")
+            if self.auto_create_tables:
+                raise ValueError("AUTO_CREATE_TABLES deve ser false em produção")
 
-    # True apenas para demo/dev — em produção use Alembic
-    auto_create_tables: bool = True
-
-
-@lru_cache
-def get_settings() -> Settings:
-    return Settings()
+settings = Settings()
