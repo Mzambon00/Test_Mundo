@@ -39,3 +39,9 @@ class Settings(BaseSettings):
                 raise ValueError("AUTO_CREATE_TABLES deve ser false em producao")
 
 settings = Settings()
+
+from functools import lru_cache
+
+@lru_cache
+def get_settings():
+    return settings

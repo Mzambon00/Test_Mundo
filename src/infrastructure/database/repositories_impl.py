@@ -1,4 +1,4 @@
-"""Implementações SQLAlchemy dos repositórios do domínio."""
+﻿"""Implementações SQLAlchemy dos repositórios do domínio."""
 
 from __future__ import annotations
 
@@ -127,6 +127,19 @@ class SQLAlchemyEventoRepository(EventoRepository):
     def marcar_falhou(self, event_id: str) -> None:
         self._atualizar_status(event_id, "failed")
 
+
+    def evento_existe(self, event_id: str) -> bool:
+        from src.infrastructure.database.models import EventoModel
+        return self._db.query(EventoModel).filter(EventoModel.event_id == event_id, EventoModel.status == 'processed').first() is not None
+
+    def registrar_evento(self, event_id: str, status: str, metadata: dict = None) -> None:
+        from src.infrastructure.database.models import EventoModel
+        existing = self._db.query(EventoModel).filter(EventoModel.event_id == event_id).first()
+        if existing:
+            existing.status = status
+        else:
+            self._db.add(EventoModel(event_id=event_id, card_id='', status=status))
+        self._db.commit()
     def _atualizar_status(self, event_id: str, status: str) -> None:
         evento = self._db.query(EventoModel).filter_by(event_id=event_id).first()
         if evento:

@@ -1,7 +1,7 @@
 ﻿from dataclasses import dataclass
 from typing import List, Dict, Any
 from src.domain.repositories import ClienteRepository
-from src.infrastructure.graphql.pipefy_adapter import PipefyClient
+from src.infrastructure.graphql.pipefy_adapter import PipefyAdapter as PipefyClient
 import logging
 
 logger = logging.getLogger(__name__)
