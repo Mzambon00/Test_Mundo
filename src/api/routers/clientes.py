@@ -1,4 +1,4 @@
-"""Router: /clientes"""
+﻿"""Router: /clientes"""
 
 from __future__ import annotations
 
@@ -28,14 +28,14 @@ class CriarClienteRequest(BaseModel):
     @classmethod
     def patrimonio_nao_negativo(cls, v: float) -> float:
         if v < 0:
-            raise ValueError("Patrimônio não pode ser negativo.")
+            raise ValueError("PatrimÃ´nio nÃ£o pode ser negativo.")
         return v
 
     @field_validator("cliente_nome", "tipo_solicitacao")
     @classmethod
     def nao_vazio(cls, v: str) -> str:
         if not v.strip():
-            raise ValueError("Campo não pode ser vazio.")
+            raise ValueError("Campo nÃ£o pode ser vazio.")
         return v
 
 
@@ -76,3 +76,4 @@ def criar_cliente(
         "card_id": output.card_id,
         "integracao_pipefy": output.integracao_pipefy,
     }
+

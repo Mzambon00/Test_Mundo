@@ -1,4 +1,4 @@
-"""Router: /webhooks — alinhado ao enunciado do teste técnico."""
+﻿"""Router: /webhooks â€” alinhado ao enunciado do teste tÃ©cnico."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ from src.security import verificar_assinatura_webhook
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 
-# Payload exato conforme enunciado do teste técnico
+# Payload exato conforme enunciado do teste tÃ©cnico
 class WebhookPipefyRequest(BaseModel):
     event_id: str
     card_id: str
@@ -81,3 +81,4 @@ def webhook_pipefy(
             else {}
         ),
     }
+
